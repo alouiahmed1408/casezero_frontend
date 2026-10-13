@@ -1,0 +1,114 @@
+<section id="scrAccuse" class="screen active">
+  <div class="book-stage">
+    <div class="book book--full">
+      <svg class="bk-corner tl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner tr" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
+      <svg class="bk-corner bl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner br" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
+      <div class="bk-pages">
+        <div class="bk-page bk-left accuse-left"><span class="pg-frame"></span>
+          <div class="pg-inner">
+            <svg class="accuse-crest" style="margin-top:1rem" viewBox="0 0 48 48"><use href="#i-scales"/></svg>
+            <div class="accuse-head"><em>Bureau of Curious Affairs</em><h3>Statement of Accusation</h3></div>
+            <p class="accuse-lead">Detective — mark this form with care. Name the guilty, the why, the how, and the with-what. The Bureau’s seal binds your word.</p>
+            <p class="accuse-oath">“I accuse of my own conviction, having weighed <b>every thread</b> tied in this book, and shall stand by it before the magistrate.”</p>
+            <span class="rstamp" style="--sa:-7deg">Official — Form 7C</span>
+          </div>
+        </div>
+        <div class="bk-gutter"></div>
+        <div class="bk-page bk-right"><span class="pg-frame"></span>
+          <div class="pg-inner" style="overflow-y:auto">
+            <header class="pg-head">
+              <div><em>Form 7C — to be completed in ink</em><h3>The Accusation</h3></div>
+              <span class="pg-case" id="accCase">Case Nº {{ caseNo() }}</span>
+            </header>
+            <div id="formFields" style="margin-top:1rem">
+              <span class="form-label">The Accused</span>
+              <div class="picker" [class.open]="open() === 'suspect'">
+                <button class="pick-btn" type="button" (click)="toggle('suspect', $event)">
+                  <span class="pick-val">
+                    @if (chosenSuspect(); as s) {
+                      <span class="pv-oval">@if (s.imageUrl) {<img [src]="s.imageUrl" alt="" style="width:100%;height:100%;object-fit:cover">} @else {<svg viewBox="0 0 40 48"><use [attr.href]="('por-' + (1 + s.id % 3)) | symref"/></svg>}</span><span><b>{{ s.name }}</b><em>{{ s.role }}</em></span>
+                    } @else {
+                      — choose from the ledger —
+                    }
+                  </span>
+                  <svg class="caret" viewBox="0 0 24 24"><use href="#i-caret"/></svg>
+                </button>
+                <ul class="pick-menu">
+                  @for (s of suspects(); track s.id) {
+                    <li (click)="pickSuspect(s, $event)"><span class="pv-oval">@if (s.imageUrl) {<img [src]="s.imageUrl" alt="" style="width:100%;height:100%;object-fit:cover">} @else {<svg viewBox="0 0 40 48"><use [attr.href]="('por-' + (1 + s.id % 3)) | symref"/></svg>}</span><span><b>{{ s.name }}</b><em>{{ s.role }}</em></span></li>
+                  }
+                </ul>
+              </div>
+              @for (f of fields; track f.key) {
+                <span class="form-label">{{ f.label }}</span>
+                @if (optionsOf(f.category).length) {
+                  <div class="picker" [class.open]="open() === f.key">
+                    <button class="pick-btn" type="button" (click)="toggle(f.key, $event)">
+                      <span class="pick-val">
+                        @if (chosen()[f.key]) {
+                          <span><b>{{ chosen()[f.key] }}</b></span>
+                        } @else {
+                          — choose from the ledger —
+                        }
+                      </span>
+                      <svg class="caret" viewBox="0 0 24 24"><use href="#i-caret"/></svg>
+                    </button>
+                    <ul class="pick-menu">
+                      @for (o of optionsOf(f.category); track o.id) {
+                        <li (click)="pick(f.key, o.text, $event)"><span><b>{{ o.text }}</b></span></li>
+                      }
+                    </ul>
+                  </div>
+                } @else {
+                  <div class="adm-field"><input type="text" maxlength="90" placeholder="Set down your accusation in ink…" [value]="typed()[f.key] || ''" (input)="type(f.key, $any($event.target).value)"></div>
+                }
+              }
+            </div>
+            <div class="accuse-actions">
+              <button class="wax" type="button" id="waxAccuse" [class.shake]="shake()" [disabled]="sending()" (click)="submit()"><svg viewBox="0 0 24 24"><use href="#i-scales"/></svg><b>Accuse</b></button>
+              <em>Press the seal to sign &amp; submit</em>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="verdict" id="verdict" [class.show]="verdict() !== null">
+    @if (verdict(); as v) {
+      <div class="v-card">
+        <i class="coffeestain"></i>
+        <em>Bureau of Curious Affairs — Verdict of the Court</em>
+        <div class="v-stamp">{{ v.stamp }}</div>
+        <div id="vRows">
+          @for (r of v.rows; track $index) {
+            <div class="vrow" [class.ok]="r.ok" [class.bad]="!r.ok"><span class="vr-k">{{ r.label }}</span><i></i>
+              <b>
+                @if (r.suspect; as s) {
+                  <span class="pv-oval">@if (s.imageUrl) {<img [src]="s.imageUrl" alt="" style="width:100%;height:100%;object-fit:cover">} @else {<svg viewBox="0 0 40 48"><use [attr.href]="('por-' + (1 + s.id % 3)) | symref"/></svg>}</span><span><b>{{ s.name }}</b><em>{{ s.role }}</em></span>
+                } @else {
+                  <span><b>{{ r.text }}</b></span>
+                }
+              </b>
+              <svg class="vr-ic" viewBox="0 0 24 24"><use [attr.href]="(r.ok ? 'i-check' : 'i-cross') | symref"/></svg></div>
+          }
+        </div>
+        <p class="v-quip" id="vQuip">
+          @if (v.timeout) {
+            <b>TIME OUT —</b> the hourglass has run dry. The Bureau reveals the answer.
+          } @else if (v.perfect) {
+            <b>{{ v.score }} / {{ v.total }} —</b> a flawless accusation. The Bureau raises its hat to you, Detective.
+          } @else {
+            <b>{{ v.score }} / {{ v.total }} —</b> the Bureau notes the discrepancy. The archives, alas, remain open.
+          }
+          @if (v.explanation) {
+            <br><br><i>{{ v.explanation }}</i>
+          }
+        </p>
+        <div class="v-actions">
+          <button class="btn-brass brassplate" type="button" id="vReopen" (click)="reopen()">Reopen the Dossier</button>
+          <button class="btn-brass primary" type="button" id="vArchives" (click)="archives()">Return to the Archives</button>
+        </div>
+      </div>
+    }
+  </div>
+</section>

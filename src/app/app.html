@@ -1,0 +1,27 @@
+<router-outlet />
+
+<aside class="plaque brassplate" [class.urgent]="timer.urgent()" id="plaque" aria-label="Time remaining">
+  <i class="rivet" style="top:5px;left:5px"></i><i class="rivet" style="top:5px;right:5px"></i>
+  <i class="rivet" style="bottom:5px;left:5px"></i><i class="rivet" style="bottom:5px;right:5px"></i>
+  <svg class="hg" viewBox="0 0 60 84" aria-hidden="true">
+    <rect x="6" y="0" width="48" height="7" rx="2" fill="url(#gWood)" stroke="#3a2410" stroke-width=".8"/>
+    <rect x="6" y="77" width="48" height="7" rx="2" fill="url(#gWood)" stroke="#3a2410" stroke-width=".8"/>
+    <rect x="9" y="6" width="3.5" height="72" fill="url(#gBrass)"/>
+    <rect x="47.5" y="6" width="3.5" height="72" fill="url(#gBrass)"/>
+    <path d="M14 8 H46 L31.5 41 L46 76 H14 L28.5 41 Z" fill="rgba(255,248,230,.14)" stroke="rgba(255,248,230,.4)" stroke-width="1.2"/>
+    <path id="sandTop" class="sand" d="M16.5 11 H43.5 L30.8 39 Z" [style.transform]="'scaleY(' + timer.fraction() + ')'"/>
+    <path id="sandBot" class="sand" d="M17 73 L43 73 L30.5 44 Z" [style.transform]="'scaleY(' + (1 - timer.fraction()) + ')'"/>
+    <line id="sandStream" x1="30" y1="41" x2="30" y2="71" stroke="#E2A94F" stroke-width="1.6" stroke-dasharray="2 3" [style.opacity]="timer.remaining() > 0 ? 1 : 0"/>
+  </svg>
+  <div class="plq-right">
+    <em>Time remaining</em>
+    <strong class="plq-digits" id="plqDigits">{{ timer.digits() }}</strong>
+    <span class="plq-sub">Case Nº <b id="plqCase">{{ timer.caseNo() }}</b></span>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts">
+  @for (t of toast.toasts(); track t.id) {
+    <div [class]="'toast ' + t.tone + (t.out ? ' out' : '')">{{ t.msg }}</div>
+  }
+</div>

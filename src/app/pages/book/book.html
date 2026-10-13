@@ -1,0 +1,159 @@
+<section id="scrBook" class="screen active">
+  <div class="book-stage">
+    <div class="book book--full">
+      <svg class="bk-corner tl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner tr" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
+      <svg class="bk-corner bl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner br" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
+      <div class="bk-pages" id="bkPages" [class.flip]="flip()">
+        <div class="sweep" id="sweep" [class.go]="sweep()"></div>
+        <div class="bk-page bk-left"><span class="pg-frame"></span>
+          <div class="pg-inner">
+            <header class="pg-head">
+              <div><em>Section</em><h3 id="secTitle">{{ sections[shown()].label }}</h3></div>
+              <span class="pg-case" id="pgCase">Case Nº {{ caseNo() }}</span>
+            </header>
+            <div class="ev-wrap">
+              <div class="ev-grid" id="evGrid" #grid
+                   (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
+                   (pointerup)="onPointerUp()" (pointercancel)="onPointerCancel()">
+                @if (loaded() && !sectionItems().length) {
+                  <p class="ev-desc" style="padding:1rem">Nothing of this kind has been filed in this dossier.</p>
+                }
+                @for (it of sectionItems(); track it.key; let i = $index) {
+                  <article class="evcard" [class.sel]="sel() === it.key" [attr.data-id]="it.key"
+                           [style.--r]="rot(i) + 'deg'" [style.--i]="i" title="Read, or drag onto another card">
+                    <div class="evc-top">
+                      <svg class="evico" viewBox="0 0 24 24"><use [attr.href]="it.icon | symref"/></svg>
+                      <div><h4>{{ it.title }}</h4><span class="evc-type">{{ typeLabel[it.type] }} — {{ sectionNo() }}/{{ order.length }}</span></div>
+                    </div>
+                    <p class="evc-tease">{{ it.tease }}</p>
+                    @if (knot(it); as k) {
+                      <span class="knot" [class]="'knot ' + k.cls">{{ k.text }}</span>
+                    }
+                  </article>
+                }
+              </div>
+              <svg class="threads" id="threads" #threads></svg>
+            </div>
+            <footer class="pg-legend">
+              <span class="lg lg-m"><i></i>agree</span>
+              <span class="lg lg-c"><i></i>contradict</span>
+              <span class="lg lg-p"><i></i>no link</span>
+            </footer>
+          </div>
+        </div>
+        <div class="bk-gutter"></div>
+        <div class="bk-page bk-right"><span class="pg-frame"></span>
+          <div class="pg-inner" id="evDetail">
+            @if (selected()) {
+              @let it = selected()!;
+              <div class="d-head">
+                <div><em>{{ typeLabel[it.type] }} — evidence of the case</em><h3>{{ it.title }}</h3></div>
+                <span class="rstamp" style="--sa:5deg;font-size:.5rem">{{ typeLabel[it.type] }}</span>
+              </div>
+              @switch (it.type) {
+                @case ('photo') {
+                  <figure class="polaroid"><i class="tape t1"></i><i class="tape t2"></i>
+                    <svg class="pimg" preserveAspectRatio="xMidYMid slice" viewBox="0 0 200 140"><use [attr.href]="it.scene | symref"/>@if (it.img) {<image [attr.href]="it.img" width="200" height="140" preserveAspectRatio="xMidYMid slice"/>}</svg>
+                    <figcaption>{{ it.cap }}</figcaption></figure>
+                  <p class="ev-desc">{{ it.body }}</p>
+                }
+                @case ('doc') {
+                  <div class="docsheet"><i class="coffeestain" style="right:18%;bottom:6%"></i><h5 class="doc-title">{{ it.title }}</h5>
+                    @for (l of it.lines; track $index) {<p class="doc-line">{{ l }}</p>}
+                    <span class="rstamp" style="--sa:6deg">FILED</span><p class="sig">— The Bureau clerk</p></div>
+                }
+                @case ('tel') {
+                  <div class="telegram"><header><b>TELEGRAM</b><span>{{ it.wireNo }}</span></header><p class="tg-body">{{ it.body }}</p><footer><span>LONDON · CENTRAL OFFICE</span><span>RECEIVED</span></footer></div>
+                }
+                @case ('hand') {
+                  <div class="handnote"><p>{{ it.hand }}</p></div><p class="ev-desc">{{ it.body }}</p>
+                }
+                @case ('call') {
+                  <div class="phono"><svg class="horn" viewBox="0 0 24 24"><use href="#i-call"/></svg>
+                    <div class="ph-plate brassplate" style="padding:.7em 1em;border-radius:8px">
+                      <button class="ph-play" type="button" aria-label="Play cylinder" (click)="togglePhono(it)"><svg viewBox="0 0 24 24"><use [attr.href]="(phonoOn() ? 'i-time' : 'i-play') | symref"/></svg></button>
+                      <div class="ph-track"><i class="ph-knob" [style.left.%]="phonoPercent(it)"></i></div>
+                      <span class="ph-time">{{ phonoLabel(it) }}</span>
+                    </div></div>
+                  <div class="transcript"><em>Transcript of the cylinder</em><p>“{{ it.body || 'No transcript on file.' }}”</p></div>
+                }
+                @case ('vid') {
+                  <div class="kineto"><i class="kin-strip l"></i><i class="kin-strip r"></i>
+                    <div class="kin-screen">
+                      @if (it.videoFile) {
+                        <video controls preload="metadata" [attr.src]="it.fileUrl" style="width:100%;height:100%;object-fit:cover"></video>
+                      } @else {
+                        <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 200 125"><use [attr.href]="it.scene | symref"/>@if (it.img) {<image [attr.href]="it.img" width="200" height="140" preserveAspectRatio="xMidYMid slice"/>}</svg>
+                      }
+                    </div>
+                    <span class="kin-cap">{{ it.cap }}</span></div>
+                  <p class="ev-desc">{{ it.body }}</p>
+                  @if (it.fileUrl && !it.videoFile && !it.img) {
+                    <p class="ev-desc"><a [href]="it.fileUrl" target="_blank" rel="noopener">Open the reel in a new window</a></p>
+                  }
+                }
+                @case ('badge') {
+                  <div class="badgecard"><header><svg viewBox="0 0 24 24"><use href="#i-badge"/></svg>BUREAU ACCESS PASS</header><p class="bc-name">{{ it.title }}</p><p class="bc-role">LOG OF ROUNDS — STAMPED AT EACH POST</p>
+                    <table class="bc-log">@for (r of it.rows; track $index) {<tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td></tr>}</table>
+                    <footer>ISSUED BY THE BUREAU — DO NOT DUPLICATE</footer><i class="coffeestain"></i></div>
+                }
+                @case ('suspect') {
+                  <div class="suspectcard"><div class="oval">@if (it.img) {<img [src]="it.img" alt="" style="width:100%;height:100%;object-fit:cover">} @else {<svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 40 48"><use [attr.href]="it.por | symref"/></svg>}</div>
+                    <h4>{{ it.title }}</h4><span class="role">{{ it.role }}</span><p class="desc">{{ it.desc }}</p>
+                    <div class="alibi"><em>Stated alibi</em><p>“{{ it.alibi }}”</p></div></div>
+                }
+                @case ('time') {
+                  <div class="timeline">@for (r of it.rows; track $index) {<div class="tl-row" [style.--i]="$index"><b>{{ r[0] }}</b><p>{{ r[1] }}</p></div>}</div>
+                }
+              }
+              <div class="ties" id="tieList">
+                @if (ties().length) {
+                  <span class="lg" style="width:100%">Tied threads —</span>
+                  @for (t of ties(); track $index) {
+                    <span class="tie" [class]="'tie ' + t.kind"><svg viewBox="0 0 24 24"><use [attr.href]="(t.kind === 'c' ? 'i-cross' : 'i-check') | symref"/></svg>{{ t.title }}</span>
+                  }
+                }
+              </div>
+            } @else {
+              <span class="brief-kicker">Case brief — read first</span>
+              <div class="brief"><h3>{{ caseTitle() }}</h3>
+                <p class="ev-desc" style="margin-top:0">{{ caseSynopsis() }}</p>
+                <ul class="brief-list">
+                  <li><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg><span>Use the <b>ribbon bookmarks</b> on the right edge to leaf between Photographs, Documents, Wires &amp; more.</span></li>
+                  <li><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg><span>Select a card on the left page to read it here.</span></li>
+                  <li><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg><span><b>Drag one card onto another</b> to tie a thread — green string agrees, red string quarrels.</span></li>
+                  <li><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg><span>When your mind is made up, press the wax seal below to sign the accusation.</span></li>
+                </ul>
+              </div>
+              <span class="rstamp" style="--sa:-6deg;margin-top:1.4rem">Read me</span>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="bk-ribbons" id="ribbons">
+        @for (s of order; track s; let i = $index) {
+          <button class="ribbon" type="button" [class.on]="section() === s" [style.--c]="sections[s].color" (click)="setSection(s)">
+            <svg viewBox="0 0 24 24"><use [attr.href]="sections[s].icon | symref"/></svg><span>{{ sections[s].label }}</span>
+          </button>
+        }
+      </div>
+      <div class="rail-seal">
+        <button class="wax" type="button" aria-label="Proceed to the final accusation" (click)="accuse()"><svg viewBox="0 0 24 24"><use href="#i-scales"/></svg><b>Accuse</b></button>
+        <em>Sign the accusation</em>
+      </div>
+      <button class="pagecurl prev" id="btnPrev" type="button" aria-label="Previous section" (click)="turn(-1)"><svg viewBox="0 0 60 60"><use href="#i-curl"/></svg></button>
+      <button class="pagecurl next" id="btnNext" type="button" aria-label="Next section" (click)="turn(1)"><svg viewBox="0 0 60 60"><use href="#i-curl"/></svg></button>
+      <span class="edge-hot l" id="edgeL" aria-hidden="true" (click)="turn(-1)"></span>
+      <span class="edge-hot r" id="edgeR" aria-hidden="true" (click)="turn(1)"></span>
+    </div>
+  </div>
+  <div class="book-bar">
+    <span class="bb-hint"><svg viewBox="0 0 24 24"><use href="#i-mag"/></svg> Drag one card onto another — the red string will tell you if they agree… or quarrel. <span><kbd>←</kbd><kbd>→</kbd> turn the pages</span></span>
+    <span class="bb-actions">
+      <button class="btn-brass brassplate" type="button" id="btnBackLib" (click)="back()">Return to the Archives</button>
+      <span class="bb-seal"><em>Sign the<br>accusation</em>
+        <button class="wax wax--sm" type="button" id="btnAccuseOpen" aria-label="Proceed to the final accusation" (click)="accuse()"><svg viewBox="0 0 24 24"><use href="#i-scales"/></svg><b>Accuse</b></button>
+      </span>
+    </span>
+  </div>
+</section>
