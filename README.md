@@ -1,25 +1,46 @@
-# CASE//ZERO frontend (Sprint 1)
+# CASE//ZERO frontend
 
-Angular 21, standalone components and signals. The CSS and the SVG sprite are taken as-is from Maquette3.html.
+The website of our detective game, made with Angular 21. The player opens a case,
+reads the evidence, links the clues that go together and then accuses a suspect.
 
-## Run
+## How to run
+
+You need Node.js and npm. The backend has to be running first.
 
     npm install
     npm start
 
-Open http://localhost:4200. The backend must run on http://localhost:8080 (change it in src/app/core/config.ts).
+Then open http://localhost:4200
 
-## Screens
+The backend address is in `src/app/core/config.ts`. It is `http://localhost:8085/api`
+right now, so change it there if your backend uses another port.
 
-| Route | Screen |
+## Pages
+
+| Address | What it is |
 |---|---|
-| / | Case archives: folders, search, opening animation |
-| /investigation/:id | The book: evidence by section, thread linking, hourglass |
-| /investigation/:id/accuse | Statement of accusation and verdict |
-| /admin | File a case and the registry |
+| `/` | List of cases, with a search box |
+| `/investigation/:id` | The book: evidence cards on the left, the selected evidence on the right, countdown |
+| `/investigation/:id/board` | All the evidence in one page, click two cards to link them |
+| `/investigation/:id/accuse` | The accusation form and the verdict |
+| `/admin` | Form to add a new case |
 
-## Notes
+## Folders
 
-- No login in Sprint 1: a guest player is created on first visit and its id is kept in localStorage.
-- The admin identity is ADMIN_ID in src/app/core/config.ts (the default admin created by the backend, id 1).
-- Cases solved by the guest are remembered in localStorage to show the CLOSED stamp on the folder.
+- `src/app/pages/`: one folder per page (library, book, board, accuse, admin)
+- `src/app/core/`: code shared by the pages
+  - `api.service.ts`: all the calls to the backend
+  - `game.service.ts`: keeps the data of the current investigation
+  - `timer.service.ts`: the countdown
+  - `guest.service.ts`: the guest player saved in the browser
+  - `items.ts`: converts the evidence from the backend to what the book page shows
+  - `models.ts`: the types of the data sent by the backend
+
+## Things to know
+
+- There is no login yet. The first time you open the site, a guest player is created
+  and its id is saved in localStorage.
+- The admin is the account with id 1 (created by the backend at the first start).
+- The cases you solved are saved in localStorage too, to show the CLOSED stamp.
+- The look (colors, folders, book) comes from `src/styles.css`.
+"# casezero_frontend" 
