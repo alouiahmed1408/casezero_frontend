@@ -2,48 +2,48 @@
   <header class="topbar">
     <a class="logo" id="logoHome" routerLink="/" tabindex="0" aria-label="CASE//ZERO — home">
       <svg class="lgmark" viewBox="0 0 64 64"><circle cx="37" cy="27" r="19" fill="none" stroke="#D76A00" stroke-width="8.5"/><text x="37" y="37" text-anchor="middle" font-family="IM Fell English,serif" font-size="29" fill="#E99F44">0</text><line x1="22.5" y1="42.5" x2="9" y2="56" stroke="#D76A00" stroke-width="8.5" stroke-linecap="round"/></svg>
-      <span><span class="lg-word">CASE<span class="sl">//</span><span class="zr">ZERO</span></span><span class="lg-sub">Bureau of Curious Affairs · Est. 1847</span></span>
+      <span><span class="lg-word">CASE<span class="sl">//</span><span class="zr">ZERO</span></span><span class="lg-sub">Detective game</span></span>
     </a>
     <div class="search-brass brassplate">
       <i class="rivet r1"></i><i class="rivet r2"></i>
       <svg viewBox="0 0 24 24"><use href="#i-mag"/></svg>
-      <input id="archiveSearch" type="text" placeholder="Search the archives..." aria-label="Search the archives" (input)="onSearch($any($event.target).value)">
+      <input id="archiveSearch" type="text" placeholder="Search cases..." aria-label="Search cases" (input)="onSearch($any($event.target).value)">
     </div>
     <nav class="nav-tabs">
-      <button class="tab-leather" type="button" (click)="soon('The members’ ledger is locked for the night…')">Profile</button>
-      <button class="tab-leather" type="button" id="btnAdmin" routerLink="/admin">Administration</button>
+      <button class="tab-leather" type="button" (click)="showMessage('The profile page is not available yet.')">Profile</button>
+      <button class="tab-leather" type="button" id="btnAdmin" routerLink="/admin">Admin</button>
     </nav>
   </header>
 
   <div class="desk">
     <div class="desk-head">
       <div class="dh-left">
-        <span class="overline">The Inspector’s Desk — London, 1847</span>
-        <h1><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg>The Case Archives<svg class="fl-r" viewBox="0 0 80 80"><use href="#i-flourish"/></svg></h1>
+        <span class="overline">Choose a case</span>
+        <h1><svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg>Case Archives<svg class="fl-r" viewBox="0 0 80 80"><use href="#i-flourish"/></svg></h1>
       </div>
-      <p class="dh-note">The case is never closed. It is only waiting for a better detective.</p>
+      <p class="dh-note">Pick a case, read the evidence and find the culprit.</p>
     </div>
 
     <div class="folders-grid" id="foldersGrid">
       @for (c of cases(); track c.id; let i = $index) {
-        <article class="folder" tabindex="0" [style.--rot]="rot(i) + 'deg'" [style.--i]="i"
-                 [attr.aria-label]="'Case Nº ' + pad3(c.id) + ' — ' + c.title"
-                 (click)="open(c)" (keydown.enter)="open(c)">
+        <article class="folder" tabindex="0" [style.--rot]="tilt(i) + 'deg'" [style.--i]="i"
+                 [attr.aria-label]="'Case Nº ' + pad3(c.id) + ': ' + c.title"
+                 (click)="openCase(c)" (keydown.enter)="openCase(c)">
           <span class="f-papers p1"></span><span class="f-papers p2"></span>
           <div class="f-inside">
             <p class="fi-syn">{{ c.synopsis }}</p>
             <div class="fi-meta">
               <span><b>{{ c.evidenceCount }}</b>&nbsp;evidence</span><span><b>{{ c.suspectCount }}</b>&nbsp;suspects</span>
-              <span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="fi-time">{{ fmt(c.timeLimit * 60) }}</span>
+              <span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="fi-time">{{ formatTime(c.timeLimit * 60) }}</span>
             </div>
-            <span class="fi-open">Open the dossier <svg viewBox="0 0 24 24"><use href="#i-arr"/></svg></span>
+            <span class="fi-open">Open the case <svg viewBox="0 0 24 24"><use href="#i-arr"/></svg></span>
           </div>
           <div class="f-front">
             <span class="f-tab">No. {{ pad3(c.id) }}</span>
             <div class="f-label">
-              <em>Case Nº {{ pad3(c.id) }} — Bureau of Curious Affairs</em>
+              <em>Case Nº {{ pad3(c.id) }}</em>
               <h3>{{ c.title }}</h3>
-              <div class="f-meta"><span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="f-time"><svg viewBox="0 0 24 24"><use href="#i-time"/></svg>{{ fmt(c.timeLimit * 60) }}</span></div>
+              <div class="f-meta"><span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="f-time"><svg viewBox="0 0 24 24"><use href="#i-time"/></svg>{{ formatTime(c.timeLimit * 60) }}</span></div>
             </div>
             @if (c.stamp) {
               <span class="f-stamp rstamp" [style.--sa]="stampAngle(c) + 'deg'">{{ c.stamp }}</span>
@@ -58,19 +58,19 @@
         </article>
       }
     </div>
-    <p id="noResults" [style.display]="cases().length ? 'none' : 'block'">Nothing in the archives under that name, Detective.</p>
+    <p id="noResults" [style.display]="cases().length ? 'none' : 'block'">No case found.</p>
 
     <footer class="desk-foot">
       <svg viewBox="0 0 80 80"><use href="#i-flourish"/></svg>
-      CASE//ZERO — Bureau of Curious Affairs · every dossier herein is a work of fiction
+      CASE//ZERO · all cases are fiction
     </footer>
   </div>
 </section>
 
 @if (picked(); as c) {
-  <div id="scrTransition" class="active" role="dialog" aria-label="Opening the dossier">
-    <div class="t-wrap" id="tWrap" (click)="wrapClick()">
-      <div class="tf" id="tf" [class.enter]="stage() !== ''" [class.opening]="stage() === 'opening' || stage() === 'done'" [class.done]="stage() === 'done'">
+  <div id="scrTransition" class="active" role="dialog" aria-label="Opening the case">
+    <div class="t-wrap" id="tWrap" (click)="skipAnimation()">
+      <div class="tf" id="tf" [class.enter]="step() !== ''" [class.opening]="step() === 'opening' || step() === 'done'" [class.done]="step() === 'done'">
         <div class="tf-papers"><i></i><i></i></div>
         <div class="tf-inside">
           <div class="tf-page left"><svg class="tf-crest" viewBox="0 0 48 48"><use href="#i-scales"/></svg><p class="tf-brief">{{ c.synopsis }}</p></div>
@@ -79,14 +79,14 @@
         <div class="tf-cover">
           <div class="cv front">
             <span class="tf-tab">No. {{ pad3(c.id) }}</span>
-            <div class="tf-label"><em>Case Nº {{ pad3(c.id) }} — Bureau of Curious Affairs</em><h3>{{ c.title }}</h3>
-              <div class="tf-meta"><span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="f-time"><svg viewBox="0 0 24 24" style="width:12px;height:12px;display:inline-block"><use href="#i-time"/></svg>{{ fmt(c.timeLimit * 60) }}</span></div>
+            <div class="tf-label"><em>Case Nº {{ pad3(c.id) }}</em><h3>{{ c.title }}</h3>
+              <div class="tf-meta"><span class="f-diff">@for (k of dots; track k) {<svg class="dmag" [class.on]="k < c.difficulty" viewBox="0 0 24 24"><use href="#i-mag"/></svg>}</span><span class="f-time"><svg viewBox="0 0 24 24" style="width:12px;height:12px;display:inline-block"><use href="#i-time"/></svg>{{ formatTime(c.timeLimit * 60) }}</span></div>
             </div>
           </div>
           <div class="cv back"></div>
         </div>
       </div>
-      <div class="t-book" id="tBook" [class.show]="stage() === 'done'">
+      <div class="t-book" id="tBook" [class.show]="step() === 'done'">
         <div class="book book--mini">
           <svg class="bk-corner tl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner tr" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
           <svg class="bk-corner bl" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg><svg class="bk-corner br" viewBox="0 0 64 64"><use href="#i-bcorner"/></svg>
@@ -101,9 +101,9 @@
             <div class="bk-gutter"></div>
             <div class="bk-page bk-right"><span class="pg-frame"></span>
               <div class="pg-inner" style="align-items:center;justify-content:center;text-align:center">
-                <em class="brief-kicker">The investigation awaits</em>
-                <button class="wax pulse" id="tWax" type="button" style="margin-top:1.1rem" [disabled]="starting()" (click)="enterBook($event)"><svg viewBox="0 0 24 24"><use href="#i-mag"/></svg><b>Start</b></button>
-                <em class="brief-kicker" style="margin-top:1.1rem">Press the seal to open the book</em>
+                <em class="brief-kicker">Ready to start?</em>
+                <button class="wax pulse" id="tWax" type="button" style="margin-top:1.1rem" [disabled]="starting()" (click)="startInvestigation($event)"><svg viewBox="0 0 24 24"><use href="#i-mag"/></svg><b>Start</b></button>
+                <em class="brief-kicker" style="margin-top:1.1rem">Press the seal to start the investigation</em>
               </div>
             </div>
           </div>

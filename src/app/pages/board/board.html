@@ -1,0 +1,58 @@
+<section class="screen active">
+  <div class="book-stage">
+    <div class="book board-book">
+      <div class="board-paper">
+        <header class="pg-head">
+          <div><em>Case Nº {{ caseNo() }}</em><h3>Link the evidence</h3></div>
+          <button class="mini-btn" type="button" (click)="backToBook()">Back to the book</button>
+        </header>
+
+        <p class="board-hint">{{ hint() }}</p>
+
+        <div class="board-grid">
+          @for (it of cards(); track it.key; let i = $index) {
+            <article class="evcard" tabindex="0" [class.sel]="firstPick()?.key === it.key"
+                     [style.--r]="tilt(i) + 'deg'" (click)="pick(it)" (keydown.enter)="pick(it)">
+              <div class="evc-top">
+                <svg class="evico" viewBox="0 0 24 24"><use [attr.href]="'#' + it.icon"/></svg>
+                <div><h4>{{ it.title }}</h4><span class="evc-type">{{ typeLabel[it.type] }}</span></div>
+              </div>
+              <p class="evc-tease">{{ it.teaser }}</p>
+              @if (isLinked(it)) {
+                <span class="knot m">LINKED</span>
+              }
+            </article>
+          }
+        </div>
+
+        <h4 class="board-sub">Your links</h4>
+        <div class="board-links">
+          @for (l of linkList(); track $index) {
+            <div class="link-row" [class]="'link-row ' + l.kind">
+              <b>{{ l.from }} ↔ {{ l.to }}</b>
+              <span>{{ l.message }}</span>
+            </div>
+          } @empty {
+            <p class="ev-desc" style="margin-top:0">No links yet.</p>
+          }
+        </div>
+
+        <footer class="pg-legend">
+          <span class="lg lg-m"><i></i>agree</span>
+          <span class="lg lg-c"><i></i>contradict</span>
+          <span class="lg lg-p"><i></i>no link</span>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <div class="book-bar">
+    <span class="bb-hint">Link the clues that go together, then make your accusation.</span>
+    <span class="bb-actions">
+      <button class="btn-brass brassplate" type="button" (click)="backToBook()">Back to the book</button>
+      <span class="bb-seal"><em>Make your<br>accusation</em>
+        <button class="wax wax--sm" type="button" aria-label="Go to the accusation" (click)="goToAccusation()"><svg viewBox="0 0 24 24"><use href="#i-scales"/></svg><b>Accuse</b></button>
+      </span>
+    </span>
+  </div>
+</section>

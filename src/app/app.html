@@ -1,6 +1,6 @@
 <router-outlet />
 
-<aside class="plaque brassplate" [class.urgent]="timer.urgent()" id="plaque" aria-label="Time remaining">
+<aside class="plaque brassplate" [class.urgent]="timer.urgent()" id="plaque" aria-label="Time left">
   <i class="rivet" style="top:5px;left:5px"></i><i class="rivet" style="top:5px;right:5px"></i>
   <i class="rivet" style="bottom:5px;left:5px"></i><i class="rivet" style="bottom:5px;right:5px"></i>
   <svg class="hg" viewBox="0 0 60 84" aria-hidden="true">
@@ -14,7 +14,7 @@
     <line id="sandStream" x1="30" y1="41" x2="30" y2="71" stroke="#E2A94F" stroke-width="1.6" stroke-dasharray="2 3" [style.opacity]="timer.remaining() > 0 ? 1 : 0"/>
   </svg>
   <div class="plq-right">
-    <em>Time remaining</em>
+    <em>Time left</em>
     <strong class="plq-digits" id="plqDigits">{{ timer.digits() }}</strong>
     <span class="plq-sub">Case Nº <b id="plqCase">{{ timer.caseNo() }}</b></span>
   </div>
@@ -22,6 +22,6 @@
 
 <div class="toasts" id="toasts">
   @for (t of toast.toasts(); track t.id) {
-    <div [class]="'toast ' + t.tone + (t.out ? ' out' : '')">{{ t.msg }}</div>
+    <div [class]="'toast ' + t.tone + (t.leaving ? ' out' : '')">{{ t.message }}</div>
   }
 </div>

@@ -6,10 +6,10 @@ import { ADMIN_ID } from '../../core/config';
 import { GuestService } from '../../core/guest.service';
 import { CaseCreateBody, CaseSummary, EvidenceType, LinkResult, OptionCategory } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
-import { UiService } from '../../core/ui.service';
-import { errorMessage, fmt, pad3, range } from '../../core/util';
+import { errorMessage, formatTime, pad3, range, setPageMode } from '../../core/util';
 
-interface EvRow {
+// one evidence (or suspect) line of the form
+interface EvidenceRow {
   type: string;
   title: string;
   body: string;
@@ -17,41 +17,49 @@ interface EvRow {
   guilty: boolean;
 }
 
-interface RelRow {
+// one link between two evidences of the form (indexes in the rows list)
+interface LinkRow {
   from: number;
   to: number;
   type: string;
   message: string;
 }
 
-export const EVT: [string, string][] = [
+// [value in the form, label shown in the dropdown]
+const EVIDENCE_TYPES: [string, string][] = [
   ['photo', 'Photo'], ['doc', 'Document'], ['message', 'Message'], ['call', 'Call'],
-  ['video', 'Video'], ['badge', 'Badge'], ['suspect', 'Suspect profile'], ['time', 'Timeline']
+  ['video', 'Video'], ['badge', 'Access pass'], ['suspect', 'Suspect profile'], ['time', 'Timeline']
 ];
 
-const EVH: Record<string, string> = {
-  photo: 'Describe what the photograph shows…',
-  doc: 'The document’s text — one line per row…',
-  message: 'The text of the telegram or letter…',
+// help text in the big text box, depends on the type
+const BODY_HINTS: Record<string, string> = {
+  photo: 'Describe what the photo shows…',
+  doc: 'Text of the document, one line per row…',
+  message: 'Text of the telegram or letter…',
   call: 'Transcript of the call…',
-  video: 'Describe what the reel shows…',
-  badge: 'One entry per line: 21:30 | Gate passed',
-  suspect: 'Line 1: role · age\nLine 2: motives, personality…\nLine 3: Alibi in their own words',
-  time: 'One entry per line: 21:30 | The watchman passes'
+  video: 'Describe what the video shows…',
+  badge: 'One entry per line, like: 21:30 | Gate passed',
+  suspect: 'Line 1: role and age\nLine 2: description\nLine 3: alibi',
+  time: 'One entry per line, like: 21:30 | The watchman passes'
 };
 
-const EVT_TITLE: Record<string, string> = {
+const DEFAULT_TITLES: Record<string, string> = {
   photo: 'Photograph', doc: 'Document', message: 'Message', call: 'Call', video: 'Video',
-  badge: 'Brass pass', suspect: 'Suspect', time: 'Timeline'
+  badge: 'Access pass', suspect: 'Suspect', time: 'Timeline'
 };
 
-const TYPE_MAP: Record<string, EvidenceType> = {
+// form value -> value the backend expects
+const BACKEND_TYPES: Record<string, EvidenceType> = {
   photo: 'PHOTO', doc: 'DOCUMENT', message: 'MESSAGE', call: 'CALL', video: 'VIDEO',
   badge: 'BADGE', suspect: 'SUSPECT_PROFILE', time: 'TIMELINE'
 };
 
-const lines = (text: string) => text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+// splits a text in lines and removes the empty ones
+function splitLines(text: string): string[] {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+}
 
+// Admin page: a form to add a new case + the list of existing cases
 @Component({
   selector: 'app-admin',
   imports: [FormsModule, RouterLink],
@@ -61,16 +69,16 @@ export class AdminComponent implements OnInit {
   private api = inject(ApiService);
   private guest = inject(GuestService);
   private toast = inject(ToastService);
-  private ui = inject(UiService);
   private router = inject(Router);
 
-  readonly registry = signal<CaseSummary[]>([]);
-  readonly solved = signal<number[]>([]);
+  readonly cases = signal<CaseSummary[]>([]);
+  readonly solvedIds = signal<number[]>([]);
   readonly sending = signal(false);
   readonly dots = range(5);
-  readonly evt = EVT;
+  readonly evidenceTypes = EVIDENCE_TYPES;
   readonly levels = [1, 2, 3, 4, 5];
 
+  // form fields
   stamp = '';
   title = '';
   synopsis = '';
@@ -81,45 +89,62 @@ export class AdminComponent implements OnInit {
   method = '';
   weapon = '';
   explanation = '';
-  optMotive = '';
-  optMethod = '';
-  optWeapon = '';
-  rows: EvRow[] = [];
-  rels: RelRow[] = [];
+  otherMotives = ''; // one per line
+  otherMethods = '';
+  otherWeapons = '';
+  rows: EvidenceRow[] = [];
+  linkRows: LinkRow[] = [];
 
   protected readonly pad3 = pad3;
-  protected readonly fmt = fmt;
+  protected readonly formatTime = formatTime;
 
   async ngOnInit() {
-    this.ui.setMode('admin');
-    this.solved.set(this.guest.solvedIds());
-    await this.loadRegistry();
+    setPageMode('admin');
+    this.solvedIds.set(this.guest.solvedIds());
+    await this.loadCases();
   }
 
-  async loadRegistry() {
+  async loadCases() {
     try {
-      this.registry.set(await this.api.listCases());
+      this.cases.set(await this.api.listCases());
     } catch (err) {
       this.toast.show(errorMessage(err), 'c');
     }
   }
 
+  // the id the new case will probably get (only for display)
   nextId() {
-    return this.registry().reduce((m, c) => Math.max(m, c.id), 0) + 1;
+    let highest = 0;
+    for (const c of this.cases()) {
+      if (c.id > highest) {
+        highest = c.id;
+      }
+    }
+    return highest + 1;
   }
 
   isClosed(c: CaseSummary) {
-    return this.solved().includes(c.id);
+    return this.solvedIds().includes(c.id);
   }
 
-  placeholder(type: string) {
-    return EVH[type];
+  bodyHint(type: string) {
+    return BODY_HINTS[type];
   }
 
-  urlPlaceholder(type: string) {
-    return type === 'call' ? 'Audio URL (optional)' : type === 'suspect' ? 'Portrait URL (optional)' : type === 'video' ? 'Video or poster URL (optional)' : 'Image URL (optional)';
+  urlHint(type: string) {
+    if (type === 'call') {
+      return 'Audio URL (optional)';
+    }
+    if (type === 'suspect') {
+      return 'Portrait URL (optional)';
+    }
+    if (type === 'video') {
+      return 'Video or poster URL (optional)';
+    }
+    return 'Image URL (optional)';
   }
 
+  // only these types can have a file
   showUrl(type: string) {
     return ['photo', 'video', 'call', 'suspect'].includes(type);
   }
@@ -128,73 +153,82 @@ export class AdminComponent implements OnInit {
     this.rows.push({ type, title: '', body: '', url: '', guilty: false });
   }
 
-  removeRow(i: number) {
-    this.rows.splice(i, 1);
+  removeRow(index: number) {
+    this.rows.splice(index, 1);
   }
 
-  validRows() {
+  // rows that are not completely empty
+  filledRows() {
     return this.rows.filter(r => r.title.trim() || r.body.trim() || r.url.trim());
   }
 
-  rowTitle(r: EvRow) {
-    return r.title.trim() || EVT_TITLE[r.type];
+  rowTitle(row: EvidenceRow) {
+    return row.title.trim() || DEFAULT_TITLES[row.type];
   }
 
-  addRel() {
-    this.rels.push({ from: 0, to: Math.min(1, Math.max(0, this.validRows().length - 1)), type: 'MATCH', message: '' });
+  addLink() {
+    const last = Math.max(0, this.filledRows().length - 1);
+    this.linkRows.push({ from: 0, to: Math.min(1, last), type: 'MATCH', message: '' });
   }
 
-  removeRel(i: number) {
-    this.rels.splice(i, 1);
+  removeLink(index: number) {
+    this.linkRows.splice(index, 1);
   }
 
-  back() {
+  backToCases() {
     this.router.navigate(['/']);
   }
 
-  soon() {
-    this.toast.show('This ledger will be opened in a later sprint.');
+  showMessage(message: string) {
+    this.toast.show(message);
   }
 
-  private optionsFor(category: OptionCategory, correct: string, extra: string) {
-    const others = lines(extra).filter(o => o.toLowerCase() !== correct.toLowerCase());
-    if (!others.length) {
+  // If the admin typed other choices, the player gets a multiple choice
+  // (the right answer + the other ones). Otherwise the player types the answer.
+  private makeOptions(category: OptionCategory, correct: string, others: string) {
+    const wrong = splitLines(others).filter(o => o.toLowerCase() !== correct.toLowerCase());
+    if (wrong.length === 0) {
       return [];
     }
-    return [correct, ...others].map(text => ({ category, text }));
+    return [correct, ...wrong].map(text => ({ category, text }));
   }
 
-  private build(): CaseCreateBody | null {
+  // checks the form and builds what we send to the backend, null if something is missing
+  private buildBody(): CaseCreateBody | null {
     const title = this.title.trim();
     const motive = this.motive.trim();
     const method = this.method.trim();
     const weapon = this.weapon.trim();
+
     if (!title) {
-      this.toast.show('A case without a name cannot be filed, Administrator.', 'c');
+      this.toast.show('Please enter a title.', 'c');
       return null;
     }
     if (!motive || !method || !weapon) {
-      this.toast.show('The Solution is the Bureau’s answer key — motive, method and weapon are required.', 'c');
+      this.toast.show('Motive, method and weapon are required.', 'c');
       return null;
     }
-    const valid = this.validRows();
-    if (!valid.length) {
-      this.toast.show('File at least one piece of evidence, Administrator.', 'c');
+    const filled = this.filledRows();
+    if (filled.length === 0) {
+      this.toast.show('Add at least one piece of evidence.', 'c');
       return null;
     }
-    const suspectRows = valid.filter(r => r.type === 'suspect');
-    if (!suspectRows.length) {
-      this.toast.show('Add at least one suspect, Administrator.', 'c');
+    const suspectRows = filled.filter(r => r.type === 'suspect');
+    if (suspectRows.length === 0) {
+      this.toast.show('Add at least one suspect.', 'c');
       return null;
     }
     if (suspectRows.filter(r => r.guilty).length !== 1) {
-      this.toast.show('Mark exactly one suspect as the guilty party.', 'c');
+      this.toast.show('Mark exactly one suspect as guilty.', 'c');
       return null;
     }
-    const rels = this.rels.filter(r => r.from !== r.to && r.from < valid.length && r.to < valid.length);
+
+    // ignore links that point to a row that does not exist or to itself
+    const validLinks = this.linkRows.filter(l => l.from !== l.to && l.from < filled.length && l.to < filled.length);
+
     return {
       title,
-      synopsis: this.synopsis.trim() || 'No synopsis filed — the clerk was feeling terse that day.',
+      synopsis: this.synopsis.trim() || 'No synopsis.',
       stamp: this.stamp.trim() || null,
       difficulty: Number(this.difficulty),
       timeLimit: Math.max(1, Number(this.timeLimit) || 20),
@@ -203,53 +237,54 @@ export class AdminComponent implements OnInit {
       method,
       weapon,
       explanation: this.explanation.trim() || null,
-      evidences: valid.map(r => {
-        const body = r.body.trim();
+      evidences: filled.map(row => {
+        const body = row.body.trim();
         return {
-          title: this.rowTitle(r).slice(0, 150),
-          teaser: (lines(body)[0] || '').slice(0, 70) || null,
-          content: body || (r.type === 'suspect' ? this.rowTitle(r) : null),
-          fileUrl: r.url.trim() || null,
-          type: TYPE_MAP[r.type]
+          title: this.rowTitle(row).slice(0, 150),
+          teaser: (splitLines(body)[0] || '').slice(0, 70) || null,
+          content: body || (row.type === 'suspect' ? this.rowTitle(row) : null),
+          fileUrl: row.url.trim() || null,
+          type: BACKEND_TYPES[row.type]
         };
       }),
-      suspects: suspectRows.map(r => {
-        const l = lines(r.body);
+      suspects: suspectRows.map(row => {
+        // line 1 = role, line 2 = description, line 3 = alibi
+        const l = splitLines(row.body);
         return {
-          name: this.rowTitle(r).slice(0, 100),
+          name: this.rowTitle(row).slice(0, 100),
           role: l[0] || null,
           description: l[1] || null,
           alibi: (l[2] || '').replace(/^alibi\s*[:\-]?\s*/i, '') || null,
-          imageUrl: r.url.trim() || null,
-          guilty: r.guilty
+          imageUrl: row.url.trim() || null,
+          guilty: row.guilty
         };
       }),
-      relations: rels.map(r => ({
-        fromIndex: Number(r.from),
-        toIndex: Number(r.to),
-        type: r.type as LinkResult,
-        message: r.message.trim() || null
+      relations: validLinks.map(l => ({
+        fromIndex: Number(l.from),
+        toIndex: Number(l.to),
+        type: l.type as LinkResult,
+        message: l.message.trim() || null
       })),
       answerOptions: [
-        ...this.optionsFor('MOTIVE', motive, this.optMotive),
-        ...this.optionsFor('METHOD', method, this.optMethod),
-        ...this.optionsFor('WEAPON', weapon, this.optWeapon)
+        ...this.makeOptions('MOTIVE', motive, this.otherMotives),
+        ...this.makeOptions('METHOD', method, this.otherMethods),
+        ...this.makeOptions('WEAPON', weapon, this.otherWeapons)
       ]
     };
   }
 
   async submit(event: Event) {
     event.preventDefault();
-    const body = this.build();
+    const body = this.buildBody();
     if (!body || this.sending()) {
       return;
     }
     this.sending.set(true);
     try {
       const created = await this.api.addCase(ADMIN_ID, body);
-      this.toast.show(`Case Nº ${pad3(created.id)} — “${created.title}” — is filed on the desk.`, 'm');
-      this.reset();
-      await this.loadRegistry();
+      this.toast.show(`Case Nº ${pad3(created.id)} "${created.title}" was saved.`, 'm');
+      this.resetForm();
+      await this.loadCases();
     } catch (err) {
       this.toast.show(errorMessage(err), 'c');
     } finally {
@@ -257,7 +292,7 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  private reset() {
+  private resetForm() {
     this.stamp = '';
     this.title = '';
     this.synopsis = '';
@@ -268,10 +303,10 @@ export class AdminComponent implements OnInit {
     this.method = '';
     this.weapon = '';
     this.explanation = '';
-    this.optMotive = '';
-    this.optMethod = '';
-    this.optWeapon = '';
+    this.otherMotives = '';
+    this.otherMethods = '';
+    this.otherWeapons = '';
     this.rows = [];
-    this.rels = [];
+    this.linkRows = [];
   }
 }

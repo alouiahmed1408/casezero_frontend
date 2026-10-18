@@ -2,22 +2,27 @@ import { Injectable, signal } from '@angular/core';
 
 export interface Toast {
   id: number;
-  msg: string;
-  tone: string;
-  out: boolean;
+  message: string;
+  tone: string; // '' = normal, 'm' = good, 'c' = bad (css classes)
+  leaving: boolean;
 }
 
+// Little messages shown in the corner of the screen
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   readonly toasts = signal<Toast[]>([]);
-  private seq = 0;
+  private nextId = 1;
 
-  show(msg: string, tone = '') {
-    const id = ++this.seq;
-    this.toasts.update(list => [...list, { id, msg, tone, out: false }]);
+  show(message: string, tone = '') {
+    const id = this.nextId++;
+    this.toasts.update(list => [...list, { id, message, tone, leaving: false }]);
+
+    // after 3.5s play the fade out, then remove it
     setTimeout(() => {
-      this.toasts.update(list => list.map(t => (t.id === id ? { ...t, out: true } : t)));
-      setTimeout(() => this.toasts.update(list => list.filter(t => t.id !== id)), 320);
-    }, 3600);
+      this.toasts.update(list => list.map(t => (t.id === id ? { ...t, leaving: true } : t)));
+      setTimeout(() => {
+        this.toasts.update(list => list.filter(t => t.id !== id));
+      }, 320);
+    }, 3500);
   }
 }
